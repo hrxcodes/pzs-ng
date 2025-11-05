@@ -75,6 +75,33 @@ main(int argc, char **argv)
 	fname = argv[1] + 5;	/* This way we simply skip the required
 				 * 'DELE'-part of the argument (so we get
 				 * filename) */
+
+	char dirname[PATH_MAX];
+	char *basename = strrchr(fname, '/');
+	if (basename == NULL) {
+		// fname does not contain a path, use the current directory
+		strcpy(dirname, "./");
+	} else {
+		// Extract the directory and file name
+		strlcpy(dirname, fname, basename - fname + 1);
+		fname = basename + 1;
+	}
+
+	// Prefix the directory with '/site'
+	char prefixed_dirname[PATH_MAX];
+	if (snprintf(prefixed_dirname, sizeof(prefixed_dirname), "/site%s", dirname) >= sizeof(prefixed_dirname)) {
+		d_log("postdel: Directory name too long after prefixing '/site'\n");
+		return 0;
+	}
+
+	// Change to the prefixed directory
+	if (chdir(prefixed_dirname) != 0) {
+		d_log("postdel: Failed to change directory to '%s': %s\n", prefixed_dirname, strerror(errno));
+		return 0;
+	}
+
+	d_log("postdel: Got a 'DELE %s' in '%s'\n", fname, prefixed_dirname);
+
 #else
 	if (argc < 6) {
                 printf("[running in ftpd-agnostic mode]\n");
